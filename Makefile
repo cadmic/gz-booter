@@ -3,36 +3,49 @@ $(error "Please set DEVKITPPC in your environment. export DEVKITPPC=<path to>dev
 endif
 
 DEVKITPRO := $(shell dirname $(DEVKITPPC))
-TARGET := gz-booter
 
-CC := $(DEVKITPPC)/bin/powerpc-eabi-gcc
+PPC_CC := $(DEVKITPPC)/bin/powerpc-eabi-gcc
 
-CFLAGS += -g -O2 -Wall -DGEKKO -mrvl -mcpu=750 -meabi -mhard-float -I$(DEVKITPRO)/libogc/include
-LDFLAGS += -Wl,-Map,build/$(TARGET).map -L$(DEVKITPRO)/libogc/lib/wii -logc
+PPC_CFLAGS += -g -O2 -Wall -DGEKKO -mrvl -mcpu=750 -meabi -mhard-float -I$(DEVKITPRO)/libogc/include
+PPC_LDFLAGS += -L$(DEVKITPRO)/libogc/lib/wii -logc
 
-C_FILES := $(wildcard src/*.c)
-O_FILES := $(patsubst src/%.c,build/%.o,$(C_FILES))
-
-$(shell mkdir -p build)
+$(shell mkdir -p build/app build/gz-booter)
 
 .PHONY: all clean format run
 
-all: build/$(TARGET).dol
+all: build/gz-booter.zip
 
 clean:
 	$(RM) -r build/
 
 format:
-	clang-format -i src/*.c
+	clang-format -i app/*.c
 
-run: build/$(TARGET).dol
-	$(DEVKITPRO)/tools/bin/wiiload build/$(TARGET).dol
+run: build/gz-booter.zip
+	$(DEVKITPRO)/tools/bin/wiiload $<
 
-build/%.o: src/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
+APP_C_FILES := $(wildcard app/*.c)
+APP_O_FILES := $(patsubst app/%.c,build/app/%.o,$(APP_C_FILES))
 
-build/$(TARGET).elf: $(O_FILES)
-	$(CC) $^ $(CFLAGS) $(LDFLAGS) -o $@
+build/app/%.o: app/%.c
+	$(PPC_CC) $(PPC_CFLAGS) -c $< -o $@
 
-build/$(TARGET).dol: build/$(TARGET).elf
+build/app/boot.elf: $(APP_O_FILES)
+	$(PPC_CC) $^ $(PPC_CFLAGS) $(PPC_LDFLAGS) -Wl,-Map,build/app/boot.map  -o $@
+
+PACKAGE_FILES := \
+	boot.dol \
+	icon.png \
+	meta.xml
+
+build/gz-booter/boot.dol: build/app/boot.elf
 	$(DEVKITPRO)/tools/bin/elf2dol $< $@
+
+build/gz-booter/icon.png: icon.png
+	cp $< $@
+
+build/gz-booter/meta.xml: meta.xml
+	cp $< $@
+
+build/gz-booter.zip: $(PACKAGE_FILES:%=build/gz-booter/%)
+	cd build && zip -r gz-booter.zip gz-booter

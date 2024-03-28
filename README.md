@@ -12,7 +12,7 @@ If a USB Gecko is plugged into Memory Card Slot B, debug logs can be read with e
 $ picocom -b 115200 --imap lfcrlf /dev/tty.usbserial-GECKUSB0
 ```
 
-and the app can be built and launched directly with
+and the app can be built and installed directly with
 
 ```sh
 $ WIILOAD=/dev/tty.usbserial-GECKUSB0 make run

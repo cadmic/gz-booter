@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<app version="1">
+    <name>GameCube GZ Booter</name>
+    <coder>OoT Speedrunning</coder>
+    <version>0.1</version>
+    <release_date>20240328000000</release_date>
+    <short_description>Run GC gz with SD card support</short_description>
+    <long_description>Under construction</long_description>
+</app>
