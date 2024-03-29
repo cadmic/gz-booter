@@ -3,7 +3,8 @@ OUTPUT_ARCH(arm)
 ENTRY(_start)
 
 MEMORY {
-    sram : ORIGIN = 0xFFFF0000, LENGTH = 0x10000
+    sram  : ORIGIN = 0xFFFF0000, LENGTH = 0x10000
+    stack : ORIGIN = 0xFFFE0000, LENGTH = 0x08000
 }
 
 SECTIONS {
@@ -35,4 +36,10 @@ SECTIONS {
         . = ALIGN(4);
         __bss_end = .;
     } >sram
+
+    .stack : {
+        __stack_start = .;
+        . = ORIGIN(stack) + LENGTH(stack);
+        __stack_end = .;
+    } >stack
 }
