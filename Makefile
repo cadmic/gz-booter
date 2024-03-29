@@ -18,7 +18,7 @@ ARM_CC := $(DEVKITARM)/bin/arm-none-eabi-gcc
 ARM_ASFLAGS += -mbig-endian -mcpu=arm926ej-s
 ARM_CCFLAGS += -Os -Wall -mbig-endian -mcpu=arm926ej-s -mthumb -fomit-frame-pointer
 ARM_CCFLAGS += -fno-builtin-memcpy -fno-builtin-memset -fno-builtin-toupper -fno-builtin-memcmp -fno-builtin-malloc -fno-builtin-free
-ARM_LDFLAGS += -nostartfiles -nodefaultlibs -n
+ARM_LDFLAGS += -nostartfiles -nodefaultlibs -n -Wl,-no-warn-rwx-segments
 
 $(shell mkdir -p build/app build/loader build/gz-booter)
 
@@ -30,7 +30,7 @@ clean:
 	$(RM) -r build/
 
 format:
-	clang-format -i app/*.c
+	clang-format -i app/*.c loader/*.c
 
 run: build/gz-booter.zip
 	$(DEVKITPRO)/tools/bin/wiiload $<
