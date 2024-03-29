@@ -1,11 +1,49 @@
+#include <dirent.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
 
+#include <fat.h>
 #include <gccore.h>
-#include <ogc/ipc.h>
 
 static void* xfb = NULL;
 static GXRModeObj* rmode = NULL;
+
+void panic(const char* fmt, ...) {
+    va_list va;
+    va_start(va, fmt);
+    vprintf(fmt, va);
+    va_end(va);
+
+    // TODO: wait for user input
+    exit(1);
+}
+
+void copy_file(const char* path, u32 addr) {
+    u32 start_addr = addr;
+    char buffer[1024];
+
+    FILE* file = fopen(path, "rb");
+    if (file == NULL) {
+        panic("Could not open file %s\n", path);
+    }
+
+    while (true) {
+        size_t bytes_read = fread(buffer, 1, sizeof(buffer), file);
+        if (bytes_read == 0) {
+            break;
+        }
+
+        memcpy((void*)addr, buffer, bytes_read);
+        addr += bytes_read;
+    }
+
+    DCFlushRange((void*)start_addr, addr - start_addr);
+    fclose(file);
+    printf("Copied %s to 0x%08X-0x%08X\n", path, start_addr, addr);
+}
 
 // Performs an IOS exploit to gain code execution on Starlet in kernel mode. See
 // https://github.com/mkwcat/saoirse/blob/9287a1024fcdd8a02a7f88305fb7942bfd3ac0d3/channel/Main/IOSBoot.cpp#L86
@@ -13,15 +51,12 @@ static GXRModeObj* rmode = NULL;
 void do_exploit(void) {
     s32 fd = IOS_Open("/dev/sha", 0);
     if (fd < 0) {
-        printf("IOS_Open failed: %d\n", fd);
-        return;
+        panic("IOS_Open failed: %d\n", fd);
     }
 
     u32* mem1 = (u32*)0x80000000;
-    mem1[0] = 0x49014A02; // ldr r1, [pc, #4]; ldr r2, [pc, #8];
-    mem1[1] = 0x600AE7FB; // str r2, [r1, #0]; b.n 0
-    mem1[2] = 0x0D8000C0; // HW_GPIOB_OUT
-    mem1[3] = 0x00008020; // SLOT_LED (and AVE_SDA)
+    mem1[0] = 0x49004708; // ldr r1, [pc, #0]; bx r1
+    mem1[1] = 0x10000000; // loader entry
 
     ioctlv vec[3];
     vec[0].data = (void*)0x00000000;
@@ -33,8 +68,7 @@ void do_exploit(void) {
 
     s32 result = IOS_Ioctlv(fd, 0, 1, 2, vec);
     if (result < 0) {
-        printf("IOS_Ioctlv failed: %d\n", result);
-        return;
+        panic("IOS_Ioctlv failed: %d\n", result);
     }
 
     // Wait forever; IOS will restart Broadway
@@ -64,7 +98,11 @@ int main(int argc, char* argv[]) {
 
     PAD_Init();
 
-    printf("gz booter has started\n");
+    if (!fatInitDefault()) {
+        panic("Failed to initialize FAT filesystem\n");
+    }
+
+    copy_file("sd:/apps/gz-booter/loader.bin", 0x90000000);
 
     while (true) {
         PAD_ScanPads();

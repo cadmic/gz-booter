@@ -2,7 +2,8 @@ A Wii homebrew app to load GameCube gz with SD card support.
 
 ## Building
 
-Install the devkitPro `wii-dev` package group and run `make`.
+Install the devkitPro `wii-dev` and `devkitARM` packages and ensure the
+`DEVKITPPC` and `DEVKITARM` environment variables are set. Then, run `make`.
 
 ## Debugging
 
