@@ -1,9 +1,4 @@
-#include <limits.h>
-#include <stdarg.h>
-#include <stdint.h>
-
-typedef int32_t s32;
-typedef uint32_t u32;
+#include "loader.h"
 
 #define EXI_CSR (*((volatile u32*)0x0D806814))
 #define EXI_CR (*((volatile u32*)0x0D806820))
@@ -78,7 +73,26 @@ void printf(const char* format, ...) {
     va_end(args);
 }
 
+void* memcpy(void* dest, const void* src, size_t count) {
+    char* dst8 = (char*)dest;
+    char* src8 = (char*)src;
+    while (count--) {
+        *dst8++ = *src8++;
+    }
+    return dest;
+}
+
 int main(void) {
     printf("Hello from loader!\n");
+
+    LoaderArgs* args = (LoaderArgs*)LOADER_ARGS_ADDR;
+    printf("ISO path: %s\n", args->iso_path);
+    printf("MIOS ELF address: 0x%x\n", args->mios_elf_addr);
+    printf("IOS binary address: 0x%x\n", args->ios_bin_addr);
+
+    memcpy((void*)0xFFFF0000, (void*)args->ios_bin_addr, 0x10000);
+
+    // Returning from main will jump to newly-loaded IOS
+    printf("Starting IOS\n");
     return 0;
 }

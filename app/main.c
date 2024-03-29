@@ -1,12 +1,12 @@
-#include <dirent.h>
-#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 
 #include <fat.h>
 #include <gccore.h>
+
+#include "loader.h"
+#include "types.h"
 
 static void* xfb = NULL;
 static GXRModeObj* rmode = NULL;
@@ -21,8 +21,8 @@ void panic(const char* fmt, ...) {
     exit(1);
 }
 
-void copy_file(const char* path, u32 addr) {
-    u32 start_addr = addr;
+size_t load_file(const char* path, u32 addr) {
+    u32 bytes = 0;
     char buffer[1024];
 
     FILE* file = fopen(path, "rb");
@@ -37,12 +37,13 @@ void copy_file(const char* path, u32 addr) {
         }
 
         memcpy((void*)addr, buffer, bytes_read);
-        addr += bytes_read;
+        bytes += bytes_read;
     }
 
-    DCFlushRange((void*)start_addr, addr - start_addr);
     fclose(file);
-    printf("Copied %s to 0x%08X-0x%08X\n", path, start_addr, addr);
+    DCFlushRange((void*)addr, bytes);
+    printf("Loaded file %s to 0x%08X-0x%08X\n", path, addr, addr + bytes);
+    return bytes;
 }
 
 // Performs an IOS exploit to gain code execution on Starlet in kernel mode. See
@@ -112,7 +113,18 @@ int main(int argc, char* argv[]) {
         panic("Failed to initialize FAT filesystem\n");
     }
 
-    copy_file("sd:/apps/gz-booter/loader.bin", 0x90000000);
+    load_file("sd:/apps/gz-booter/loader.bin", 0x90000000);
+
+    u32 args_addr = LOADER_ARGS_ADDR | 0x80000000;
+    LoaderArgs* args = (LoaderArgs*)args_addr;
+
+    u32 ios_bin_addr = args_addr + sizeof(LoaderArgs);
+    load_file("sd:/apps/gz-booter/ios.bin", ios_bin_addr);
+
+    args->iso_path[0] = '\0';
+    args->mios_elf_addr = 0;
+    args->ios_bin_addr = ios_bin_addr & ~0x80000000;
+    DCFlushRange((void*)args_addr, sizeof(LoaderArgs));
 
     while (true) {
         PAD_ScanPads();

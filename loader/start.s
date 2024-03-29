@@ -25,10 +25,25 @@ clear_bss_loop:
     // set up stack
     ldr sp, =0x10100000
 
-    // jump to main
+    // call main
     ldr r0, =main
-    bx r0
+    blx r0
 
-    // loop if main returns
-loop:
-    b loop
+    // disable MMU
+    mrc p15, 0, r0, c1, c0, 0
+    bic r0, r0, #0x1
+    mcr p15, 0, r0, c1, c0, 0
+
+    // clean dcache
+clean_dcache_loop:
+    mrc p15, 0, r15, c7, c10, 3
+    bne clean_dcache_loop
+
+    // drain write buffer
+    mcr p15, 0, r0, c7, c10, 4
+
+    // invalidate icache
+    mcr p15, 0, r0, c7, c5, 0
+
+    // branch to IOS reset vector
+    ldr pc, =0xFFFF0000
