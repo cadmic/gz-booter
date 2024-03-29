@@ -16,8 +16,7 @@ ARM_AS := $(DEVKITARM)/bin/arm-none-eabi-as
 ARM_CC := $(DEVKITARM)/bin/arm-none-eabi-gcc
 
 ARM_ASFLAGS += -mbig-endian -mcpu=arm926ej-s
-ARM_CCFLAGS += -Os -Wall -mbig-endian -mcpu=arm926ej-s -mthumb -fomit-frame-pointer
-ARM_CCFLAGS += -fno-builtin-memcpy -fno-builtin-memset -fno-builtin-toupper -fno-builtin-memcmp -fno-builtin-malloc -fno-builtin-free
+ARM_CCFLAGS += -Os -Wall -mbig-endian -mcpu=arm926ej-s -mthumb -fomit-frame-pointer -fno-builtin-printf
 ARM_LDFLAGS += -nostartfiles -nodefaultlibs -n -Wl,-no-warn-rwx-segments
 
 $(shell mkdir -p build/app build/loader build/gz-booter)
