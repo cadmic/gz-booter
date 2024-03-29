@@ -77,6 +77,13 @@ void do_exploit(void) {
     }
 }
 
+bool reset_pressed = false;
+bool power_pressed = false;
+
+void reset_callback(u32 irq, void* ctx) { reset_pressed = true; }
+
+void power_callback(void) { power_pressed = true; }
+
 int main(int argc, char* argv[]) {
     VIDEO_Init();
 
@@ -96,6 +103,9 @@ int main(int argc, char* argv[]) {
     CON_Init(xfb, 20, 20, rmode->fbWidth, rmode->xfbHeight, rmode->fbWidth * VI_DISPLAY_PIX_SZ);
     CON_EnableGecko(1, 0);
 
+    SYS_SetPowerCallback(power_callback);
+    SYS_SetResetCallback(reset_callback);
+
     PAD_Init();
 
     if (!fatInitDefault()) {
@@ -106,9 +116,15 @@ int main(int argc, char* argv[]) {
 
     while (true) {
         PAD_ScanPads();
-
         u16 buttons = PAD_ButtonsDown(0);
-        if (buttons & PAD_BUTTON_A) {
+
+        if (power_pressed) {
+            printf("Shutting down ...\n");
+            SYS_ResetSystem(SYS_POWEROFF, 0, 0);
+        } else if (reset_pressed || (buttons & PAD_BUTTON_START)) {
+            printf("Exiting ...\n");
+            SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);
+        } else if (buttons & PAD_BUTTON_A) {
             printf("A button pressed, performing exploit\n");
             do_exploit();
         }
